@@ -4,7 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8057ffb3-c0b5-409e-bfff-db1a97f96620" name="Changes" comment="" />
+    <list default="true" id="8057ffb3-c0b5-409e-bfff-db1a97f96620" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Round_1/Data.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/prices_round_1_day_-1.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/prices_round_1_day_-2.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/prices_round_1_day_0.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/trades_round_1_day_-1.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/trades_round_1_day_-2.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/trades_round_1_day_0.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/Simple_strat.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Round_1/strategy_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Round_1/Current_best.py" beforeDir="false" afterPath="$PROJECT_DIR$/Round_1/Current_best.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -15,24 +27,32 @@
       <entry key="_/Users/luigidigregorio/Library/CloudStorage/Dropbox/POLIMI/Interview/IMC_Prosperity4" value="3CJM3DS2erVFkOPQI0OYeJOZqtD" />
     </persistenceIdMap>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "LvSkywalker"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;LvSkywalker&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "git@github.com:Jackirn/IMC_Prosperity4.git",
-    "accountId": "c02e44bd-4869-4ccd-9afa-a9a4591dd128"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:Jackirn/IMC_Prosperity4.git&quot;,
+    &quot;accountId&quot;: &quot;c02e44bd-4869-4ccd-9afa-a9a4591dd128&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 4
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
   <component name="ProjectId" id="3CJM3DS2erVFkOPQI0OYeJOZqtD" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -40,12 +60,14 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "gigi",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/Users/luigidigregorio/Library/CloudStorage/Dropbox/POLIMI/Interview/IMC_Prosperity4/Tutorial_round/gigi",
+    "last_opened_file_path": "/Users/luigidigregorio/Library/CloudStorage/Dropbox/POLIMI/Interview/IMC_Prosperity4/Round_1",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -58,6 +80,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Round_1" />
       <recent name="$PROJECT_DIR$/Tutorial_round/gigi" />
       <recent name="$PROJECT_DIR$/Tutorial_round" />
     </key>
@@ -78,6 +101,7 @@
       <option name="presentableId" value="Default" />
       <updated>1776099018021</updated>
       <workItem from="1776099019129" duration="6163000" />
+      <workItem from="1776170248401" duration="18882000" />
     </task>
     <servers />
   </component>
