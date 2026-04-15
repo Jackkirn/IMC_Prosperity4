@@ -5,17 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8057ffb3-c0b5-409e-bfff-db1a97f96620" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Round_1/Data.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/prices_round_1_day_-1.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/prices_round_1_day_-2.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/prices_round_1_day_0.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/trades_round_1_day_-1.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/trades_round_1_day_-2.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/ROUND1_data/trades_round_1_day_0.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/Simple_strat.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Round_1/strategy_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Round_1/Current_best.py" beforeDir="false" afterPath="$PROJECT_DIR$/Round_1/Current_best.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Round_1/strategy_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Round_1/strategy_v3.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -101,7 +92,7 @@
       <option name="presentableId" value="Default" />
       <updated>1776099018021</updated>
       <workItem from="1776099019129" duration="6163000" />
-      <workItem from="1776170248401" duration="18882000" />
+      <workItem from="1776170248401" duration="21675000" />
     </task>
     <servers />
   </component>

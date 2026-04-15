@@ -457,22 +457,25 @@ class Trader:
 
         orders: List[Order] = []
 
+        # Riempiamo la capacità Long il prima possibile
         if buy_cap > 0:
-            # Hit all visible asks first
+
+            best_bid = self._best_bid(od)
+            best_ask = self._best_ask(od)
+            # Colpiamo tutti gli ask visibili
             take_orders, buy_cap = self._take_asks_below(
                 product=product,
                 od=od,
                 buy_cap=buy_cap,
-                max_ask=10**9,
+                max_ask=best_ask,
             )
             orders.extend(take_orders)
 
-            # Then rest at aggressive bid = best ask
-            best_ask = self._best_ask(od)
-            best_bid = self._best_bid(od)
+            # Se dopo aver colpito a mercato abbiamo ancora margine, piazziamo ordini bid aggressivi
 
-            if buy_cap > 0 and best_ask is not None and best_bid is not None:
-                orders.append(Order(product, best_ask, buy_cap))
+            if buy_cap > 0 and best_bid is not None:
+                # Quotiamo al best_bid + 1 per farci fillare
+                orders.append(Order(product, best_bid + 1, buy_cap))
 
         result[product] = orders
 
