@@ -28,14 +28,14 @@ class Trader:
     # ==========================================================
     # PARAMETERS — PEPPER
     # ==========================================================
-    PEPPER_MAX_PASSIVE_SIZE = 10
+    PEPPER_MAX_PASSIVE_SIZE = 20
     PEPPER_AGGRESSIVE_ACCUMULATION = True
 
     # ==========================================================
     # PARAMETERS — ASH
     # ==========================================================
     ASH_TAKE_THRESHOLD = 0
-    ASH_MAX_PASSIVE_SIZE = 10
+    ASH_MAX_PASSIVE_SIZE = 20
     ASH_MM_R_LOW = 0.00
     ASH_MM_R_HIGH = 1.00
 
@@ -43,9 +43,40 @@ class Trader:
     ASH_EMA_ALPHA = 0.08
     ASH_MIN_SIGMA = 1.0
     ASH_FAIR_Z_BETA = 1.15
-    ASH_TAKING_Z_THRESHOLD = 1.25
     ASH_SIZE_SKEW_STRENGTH = 0.35
     ASH_MAX_Z_FOR_SKEW = 3.0
+
+    # --- Online adaptive beta ---
+    # Beta: adapted via online regression z -> next return.
+    #   beta_opt = -EMA_cov(z, return) / EMA_var(z)
+    #   This is the theoretically optimal mean-reversion coefficient,
+    #   estimated from the actual data as it arrives.
+    # Alpha: left fixed (see comments in code for why).
+    ASH_USE_ADAPTIVE_BETA = True
+    ASH_BETA_MIN = 0.3            # floor for beta
+    ASH_BETA_MAX = 2.5            # ceiling for beta
+    # The regression EMA speed is derived from ASH_EMA_ALPHA, not hardcoded.
+    # Ratio k=8 means the regression window is ~8x wider than the price EMA,
+    # giving ~8 * (1/alpha) ≈ 100 effective observations per beta estimate.
+    # This ties the two timescales together: if you change ASH_EMA_ALPHA,
+    # the regression window rescales automatically.
+    ASH_BETA_REG_K = 8
+
+    # --- Online adaptive z-thresholds (replaces static ASH_TAKING_Z_THRESHOLD / ASH_MR_SIDE_OFF_Z) ---
+    # The two thresholds are now online-adaptive estimates of the q-th quantile
+    # of |z|. This makes them self-calibrate to the current volatility regime.
+    # If you want to fall back to the static behaviour, set ASH_USE_ADAPTIVE_Z = False
+    # and the code will use ASH_TAKING_Z_THRESHOLD / ASH_MR_SIDE_OFF_Z.
+    ASH_USE_ADAPTIVE_Z = True
+    ASH_Q_TAKE = 0.90          # quantile of |z| to trigger aggressive take
+    ASH_Q_SIDE = 0.99          # quantile of |z| to turn off one making side
+    ASH_LR_TAKE = 0.01         # learning rate for q_take estimator
+    ASH_LR_SIDE = 0.005        # learning rate for q_side estimator
+    ASH_Q_TAKE_INIT = 1.5      # initial guess (≈ historical q90 of |z|)
+    ASH_Q_SIDE_INIT = 2.5      # initial guess (≈ historical q99 of |z|)
+
+    # Static fallback values (only used when ASH_USE_ADAPTIVE_Z = False)
+    ASH_TAKING_Z_THRESHOLD = 1.25
     ASH_MR_SIDE_OFF_Z = 2.5
 
     # Inventory management for ASH only
@@ -74,6 +105,15 @@ class Trader:
             "ash_mu": None,
             "ash_var": None,
             "ash_prev_mid": None,
+            # Online quantile estimators of |z|
+            "ash_q_take_est": self.ASH_Q_TAKE_INIT,
+            "ash_q_side_est": self.ASH_Q_SIDE_INIT,
+            # Adaptive beta state (online regression z -> return)
+            "ash_beta": self.ASH_FAIR_Z_BETA,
+            "ash_ema_cov_zr": 0.0,
+            "ash_ema_var_z": 1.0,
+            "ash_prev_z": None,
+            "ash_prev_micro": None,
         }
         if not trader_data:
             return default_state
@@ -284,6 +324,22 @@ class Trader:
         return True, True
 
     # ==========================================================
+    # ONLINE QUANTILE TRACKER (for adaptive z thresholds)
+    # ==========================================================
+    def _update_quantile(self, est: float, x: float, q: float, lr: float) -> float:
+        """
+        Robbins-Monro stochastic approximation for the q-th quantile.
+        Update rule: Δest = lr * (1[x > est] - (1 - q))
+        Equivalently:
+            if x > est:  est += lr * q
+            else:        est -= lr * (1 - q)
+        At equilibrium P(x > est) = 1 - q, i.e. est is the q-th quantile.
+        """
+        if x > est:
+            return est + lr * q
+        return est - lr * (1.0 - q)
+
+    # ==========================================================
     # ASH ONLINE MR HELPERS
     # ==========================================================
     def _update_online_stats(
@@ -328,7 +384,13 @@ class Trader:
         if mid is None or micro is None:
             return None, None, None
 
-        # Online stats tracked on micro (was: mid)
+        # --- Resolve current beta (adaptive or static) ---
+        if self.ASH_USE_ADAPTIVE_BETA:
+            beta = trader_state.get("ash_beta", self.ASH_FAIR_Z_BETA)
+        else:
+            beta = self.ASH_FAIR_Z_BETA
+
+        # --- Online EMA stats (alpha is fixed) ---
         _, _, z = self._update_online_stats(
             trader_state,
             key_mu="ash_mu",
@@ -337,15 +399,86 @@ class Trader:
             alpha=self.ASH_EMA_ALPHA,
             min_sigma=self.ASH_MIN_SIGMA,
         )
-        fair = micro - self.ASH_FAIR_Z_BETA * z
+
+        # --- Adapt beta for NEXT tick ---
+        if self.ASH_USE_ADAPTIVE_BETA:
+            self._adapt_beta(trader_state, micro, z)
+
+        # --- Online update of quantile estimates of |z| ---
+        if self.ASH_USE_ADAPTIVE_Z:
+            az = abs(z)
+            trader_state["ash_q_take_est"] = self._update_quantile(
+                trader_state.get("ash_q_take_est", self.ASH_Q_TAKE_INIT),
+                az, self.ASH_Q_TAKE, self.ASH_LR_TAKE,
+            )
+            trader_state["ash_q_side_est"] = self._update_quantile(
+                trader_state.get("ash_q_side_est", self.ASH_Q_SIDE_INIT),
+                az, self.ASH_Q_SIDE, self.ASH_LR_SIDE,
+            )
+
+        fair = micro - beta * z
         return fair, mid, z
-    def _ash_reversion_side_filter(self, z: float) -> tuple[bool, bool]:
+
+    # ==========================================================
+    # ADAPTIVE BETA
+    # ==========================================================
+    def _adapt_beta(self, trader_state: dict, micro: float, z: float) -> None:
+        """
+        Adapt beta via online regression: return_{t} = -beta * z_{t-1} + noise.
+
+        We maintain EMA estimates of cov(z_{t-1}, return_t) and var(z_{t-1}).
+        beta = -ema_cov / ema_var_z
+
+        This gives us the theoretically optimal mean-reversion multiplier,
+        estimated from the actual data as it arrives.
+        """
+        prev_z = trader_state.get("ash_prev_z")
+        prev_micro = trader_state.get("ash_prev_micro")
+
+        # Save current values for next tick
+        trader_state["ash_prev_z"] = z
+        trader_state["ash_prev_micro"] = micro
+
+        if prev_z is None or prev_micro is None:
+            return
+
+        # Return from previous tick to this tick
+        ret = micro - prev_micro
+
+        # Update EMA of cov(z_{t-1}, return_t) and var(z_{t-1})
+        # Regression EMA speed is derived from the price EMA speed:
+        # alpha_reg = ASH_EMA_ALPHA / ASH_BETA_REG_K
+        a = self.ASH_EMA_ALPHA / self.ASH_BETA_REG_K
+        ema_cov = trader_state.get("ash_ema_cov_zr", 0.0)
+        ema_var_z = trader_state.get("ash_ema_var_z", 1.0)
+
+        ema_cov = (1.0 - a) * ema_cov + a * (prev_z * ret)
+        ema_var_z = (1.0 - a) * ema_var_z + a * (prev_z * prev_z)
+
+        trader_state["ash_ema_cov_zr"] = ema_cov
+        trader_state["ash_ema_var_z"] = ema_var_z
+
+        # Compute beta = -cov / var (with protection against division by tiny var)
+        if ema_var_z > 0.01:
+            beta_new = -ema_cov / ema_var_z
+            beta_new = max(self.ASH_BETA_MIN, min(self.ASH_BETA_MAX, beta_new))
+            trader_state["ash_beta"] = beta_new
+
+    def _ash_get_z_thresholds(self, trader_state: dict) -> tuple[float, float]:
+        """Return (taking_z_threshold, mr_side_off_z), adaptive or static."""
+        if self.ASH_USE_ADAPTIVE_Z:
+            take_z = trader_state.get("ash_q_take_est", self.ASH_Q_TAKE_INIT)
+            side_z = trader_state.get("ash_q_side_est", self.ASH_Q_SIDE_INIT)
+            return take_z, side_z
+        return self.ASH_TAKING_Z_THRESHOLD, self.ASH_MR_SIDE_OFF_Z
+
+    def _ash_reversion_side_filter(self, z: float, side_off_z: float) -> tuple[bool, bool]:
         place_bid = True
         place_ask = True
 
-        if z >= self.ASH_MR_SIDE_OFF_Z:
+        if z >= side_off_z:
             place_bid = False
-        elif z <= -self.ASH_MR_SIDE_OFF_Z:
+        elif z <= -side_off_z:
             place_ask = False
 
         return place_bid, place_ask
@@ -370,10 +503,11 @@ class Trader:
         z: float,
         buy_cap: int,
         sell_cap: int,
+        taking_z_threshold: float,
     ) -> tuple[List[Order], int, int]:
         orders: List[Order] = []
 
-        if z <= -self.ASH_TAKING_Z_THRESHOLD and buy_cap > 0:
+        if z <= -taking_z_threshold and buy_cap > 0:
             buy_orders, buy_cap = self._take_asks_below(
                 product=product,
                 od=od,
@@ -382,7 +516,7 @@ class Trader:
             )
             orders.extend(buy_orders)
 
-        elif z >= self.ASH_TAKING_Z_THRESHOLD and sell_cap > 0:
+        elif z >= taking_z_threshold and sell_cap > 0:
             sell_orders, sell_cap = self._take_bids_above(
                 product=product,
                 od=od,
@@ -421,6 +555,8 @@ class Trader:
         inventory_fair_gamma: float = 0.0,
         inventory_size_skew_strength: float = 0.0,
         inventory_side_threshold_frac: float = 1.0,
+        ash_taking_z_threshold: float = 1.25,
+        ash_mr_side_off_z: float = 2.5,
     ) -> None:
         od = state.order_depths.get(product)
         if od is None:
@@ -480,6 +616,7 @@ class Trader:
                     z=z,
                     buy_cap=buy_cap,
                     sell_cap=sell_cap,
+                    taking_z_threshold=ash_taking_z_threshold,
                 )
                 orders.extend(extra_orders)
 
@@ -506,7 +643,7 @@ class Trader:
                 ask_mult = 1.0
 
                 if use_ash_mr_logic and z is not None:
-                    mr_bid, mr_ask = self._ash_reversion_side_filter(z)
+                    mr_bid, mr_ask = self._ash_reversion_side_filter(z, ash_mr_side_off_z)
                     place_bid = place_bid and mr_bid
                     place_ask = place_ask and mr_ask
 
@@ -599,6 +736,9 @@ class Trader:
         if fair_float is None or mid is None or z is None:
             return
 
+        # Get adaptive (or static fallback) z thresholds
+        take_z, side_z = self._ash_get_z_thresholds(trader_state)
+
         self._trade_product(
             state=state,
             result=result,
@@ -614,6 +754,8 @@ class Trader:
             inventory_fair_gamma=self.ASH_INVENTORY_FAIR_GAMMA,
             inventory_size_skew_strength=self.ASH_INVENTORY_SIZE_SKEW_STRENGTH,
             inventory_side_threshold_frac=self.ASH_INVENTORY_SIDE_THRESHOLD_FRAC,
+            ash_taking_z_threshold=take_z,
+            ash_mr_side_off_z=side_z,
         )
 
         trader_state["ash_prev_mid"] = mid
